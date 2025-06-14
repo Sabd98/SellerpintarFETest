@@ -25,6 +25,7 @@ import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useCallback } from "react";
 
 const loginSchema = z.object({
   username: z.string().min(6, "Username must be at least 6 characters"),
@@ -40,7 +41,7 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = async (values) => {
+  const onSubmit = useCallback(async (values) => {
     try {
       const response = await api.post("/auth/login", values);
 
@@ -58,7 +59,9 @@ export default function LoginPage() {
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
     }
-  };
+  },[api,toast]);
+  
+  
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100 p-4">

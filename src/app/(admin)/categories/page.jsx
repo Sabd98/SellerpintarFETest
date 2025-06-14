@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,18 +94,21 @@ export default function CategoryManagement() {
     }
   };
 
-  const onSubmit = async (values) => {
-    try {
-      const response = await api.post("/categories", values);
-      onSuccess(response.data);
-      setOpen(false);
-      form.reset();
-      toast.success("Category is Created");
-    } catch (error) {
-      setOpen(true);
-      toast.error("Create category failed:", error);
-    }
-  };
+  const onSubmit = useCallback(
+    async (values) => {
+      try {
+        await api.post("/categories", values);
+        setOpenCreateDialog(false);
+        form.reset();
+        toast.success("Category is Created");
+      } catch (error) {
+        setOpenCreateDialog(true);
+        toast.error("Create category failed:", error);
+      }
+    },
+    [form, setOpenCreateDialog]
+  );
+
 
   useEffect(() => {
     if (selectedCategory) {
@@ -119,25 +122,31 @@ export default function CategoryManagement() {
     setOpenEditDialog(true);
   };
 
-  const handleEdit = async (values) => {
-    if (!selectedCategory) return;
 
-    try {
-      const response = await api.put(
-        `/categories/${selectedCategory.id}`,
-        values
-      );
-      setCategories((prev) =>
-        prev.map((c) => (c.id === selectedCategory.id ? response.data : c))
-      );
-      toast.success("Edit Success");
+  const handleEdit = useCallback(
+    async (values) => {
+      if (!selectedCategory) return;
 
-      setOpenEditDialog(false);
-    } catch (error) {
-      setOpenEditDialog(true);
-      toast.error("Error updating category:", error);
-    }
-  };
+      try {
+        const response = await api.put(
+          `/categories/${selectedCategory.id}`,
+          values
+        );
+        setCategories((prev) =>
+          prev.map((c) => (c.id === selectedCategory.id ? response.data : c))
+        );
+        toast.success("Edit Success");
+
+        setOpenEditDialog(false);
+      } catch (error) {
+        setOpenEditDialog(true);
+        toast.error("Error updating category:", error);
+      }
+    },
+    [selectedCategory, form, setOpenEditDialog, setCategories]
+  );
+
+
 
   return (
     <main className="py-24  bg-gray-100">

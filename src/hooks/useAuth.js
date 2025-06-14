@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 
 export function useAuth() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -22,11 +23,11 @@ export function useAuth() {
       } catch (error) {
         setUser(null);
       } finally {
-        setLoading(false); 
+        setLoading(false);
       }
     };
 
     checkAuth();
   }, []);
-  return { user, loading, token }; 
+  return { user, loading, token };
 }

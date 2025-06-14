@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ import { dummyCategories, dummyArticles } from "@/lib/dummyData";
 import { isValidUrl } from "@/utils/validUrl";
 import PaginationTemplate from "@/components/ui-templates/PaginationTemplate";
 import SelectTemplate from "@/components/ui-templates/SelectTemplate";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminArticleList() {
   const [articles, setArticles] = useState([]);
@@ -130,17 +131,20 @@ export default function AdminArticleList() {
     fetchData();
   }, [debouncedSearch, selectedCategory, currentPage]);
 
-  const handleDelete = async (id) => {
-    try {
-      await api.delete(`/articles/${id}`);
-      setArticles(articles.filter((article) => article.id !== id));
-      toast.success("Delete Article Success");
-    } catch (error) {
-      toast.error("Delete Article Failed");
-    } finally {
-      setOpenDeleteDialog(false);
-    }
-  };
+  const handleDelete = useCallback(
+    async (id) => {
+      try {
+        await api.delete(`/articles/${id}`);
+        setArticles(articles.filter((article) => article.id !== id));
+        toast.success("Delete Article Success");
+      } catch (error) {
+        toast.error("Delete Article Failed");
+      } finally {
+        setOpenDeleteDialog(false);
+      }
+    },
+    [articles, setArticles, setOpenDeleteDialog]
+  );
 
   return (
     <main className="py-24 bg-gray-100">
@@ -192,17 +196,19 @@ export default function AdminArticleList() {
               <TableRow key={article.id}>
                 <TableCell className="flex justify-center items-center">
                   {isValidUrl(article.imageUrl) && (
-                    <div className="w-[80px] h-[80px] relative">
-                      <Image
-                        src={article.imageUrl}
-                        alt={article.title || "Article thumbnail"}
-                        fill
-                        className="rounded object-cover"
-                        onError={(e) => {
-                          e.target.src = "/placeholder.jpg";
-                        }}
-                      />
-                    </div>
+                    <Suspense fallback={<Skeleton />}>
+                      <div className="w-[80px] h-[80px] relative">
+                        <Image
+                          src={article.imageUrl}
+                          alt={article.title || "Article thumbnail"}
+                          fill
+                          className="rounded object-cover"
+                          onError={(e) => {
+                            e.target.src = "/placeholder.jpg";
+                          }}
+                        />
+                      </div>
+                    </Suspense>
                   )}
                 </TableCell>
                 <TableCell className="text-center font-medium">

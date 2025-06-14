@@ -26,6 +26,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useCallback } from "react";
 
 const registerSchema = z
   .object({
@@ -55,7 +56,7 @@ export default function RegisterPage() {
     },
   });
 
-  const onSubmit = async (values) => {
+  const onSubmit = useCallback(async (values) => {
     try {
       const { confirmPassword, ...registrationData } = values;
       await api.post("/auth/register", registrationData);
@@ -66,7 +67,9 @@ export default function RegisterPage() {
         error.response?.data?.message || "Registration failed";
       toast.error(errorMessage);
     }
-  };
+  },
+    [api, router, toast],
+  );
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100 p-4">

@@ -3,7 +3,6 @@ import {
   Bold,
   Italic,
   Image,
-  List,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -28,11 +27,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +40,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { ImagePlus } from "lucide-react";
 import SelectTemplate from "../ui-templates/SelectTemplate";
+import { Skeleton } from "../ui/skeleton";
 
 const articleFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -137,80 +136,87 @@ export default function ArticleForm() {
     fetchCategories();
   }, []);
 
-  const onSubmit = async (values) => {
-    setIsLoading(true);
-    setFormErrors({});
+  const onSubmit = useCallback(
+    async (values) => {
+      setIsLoading(true);
+      setFormErrors({});
 
-    try {
-      if (useDummyData) {
-        const articleData = {
-          id: isEditMode ? id : `dummy-${Date.now()}`,
-          title: values.title,
-          content: values.content,
-          categoryId: values.categoryId,
-          imageUrl:
-            values.imageUrl instanceof File
-              ? URL.createObjectURL(values.imageUrl)
-              : values.imageUrl || "/placeholder-article.jpg",
-          createdAt: isEditMode ? article.createdAt : new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          categories: [
-            categories.find((c) => c.id === values.categoryId)?.name ||
-              "General",
-          ],
-        };
+      try {
+        if (useDummyData) {
+          const articleData = {
+            id: isEditMode ? id : `dummy-${Date.now()}`,
+            title: values.title,
+            content: values.content,
+            categoryId: values.categoryId,
+            imageUrl:
+              values.imageUrl instanceof File
+                ? URL.createObjectURL(values.imageUrl)
+                : values.imageUrl || "/placeholder-article.jpg",
+            createdAt: isEditMode
+              ? article.createdAt
+              : new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            categories: [
+              categories.find((c) => c.id === values.categoryId)?.name ||
+                "General",
+            ],
+          };
 
-        alert(
-          `Article ${
-            isEditMode ? "updated" : "created"
-          } locally:\n${JSON.stringify(articleData, null, 2)}`
-        );
-      } else {
-        let uploadedImageUrl = null;
-        if (values.imageUrl instanceof File) {
-          const imageFormData = new FormData();
-          imageFormData.append("image", values.imageUrl);
-          try {
-            const uploadResponse = await api.post("/upload", imageFormData);
-            uploadedImageUrl =
-              uploadResponse.data?.imageUrl || uploadResponse.data?.url;
-            toast.success("Image uploaded successfully");
-          } catch (error) {
-            toast.error("Failed to upload image");
-            return;
+          alert(
+            `Article ${
+              isEditMode ? "updated" : "created"
+            } locally:\n${JSON.stringify(articleData, null, 2)}`
+          );
+        } else {
+          let uploadedImageUrl = null;
+          if (values.imageUrl instanceof File) {
+            const imageFormData = new FormData();
+            imageFormData.append("image", values.imageUrl);
+            try {
+              const uploadResponse = await api.post("/upload", imageFormData);
+              uploadedImageUrl =
+                uploadResponse.data?.imageUrl || uploadResponse.data?.url;
+              toast.success("Image uploaded successfully");
+            } catch (error) {
+              toast.error("Failed to upload image");
+              return;
+            }
+          }
+
+          const articleData = {
+            title: String(values.title).trim(),
+            content: String(values.content).trim(),
+            categoryId: values.categoryId.replace(/['"{}]/g, ""),
+            userId: user?.id,
+            imageUrl:
+              uploadedImageUrl ||
+              (typeof values.imageUrl === "string" ? values.imageUrl : null),
+          };
+
+          if (isEditMode) {
+            await api.put(`/articles/${id}`, articleData);
+            toast.success("Article Edited Successfully");
+          } else {
+            await api.post("/articles", articleData);
+            toast.success("Article Submitted");
           }
         }
-
-        const articleData = {
-          title: String(values.title).trim(),
-          content: String(values.content).trim(),
-          categoryId: values.categoryId.replace(/['"{}]/g, ""),
-          userId: user?.id,
-          imageUrl:
-            uploadedImageUrl ||
-            (typeof values.imageUrl === "string" ? values.imageUrl : null),
-        };
-
-        if (isEditMode) {
-          await api.put(`/articles/${id}`, articleData);
-          toast.success("Article Edited Successfully");
+        router.push("/articles");
+      } catch (error) {
+        toast.error("Error saving article:", error);
+        if (error.response?.data?.errors) {
+          setFormErrors(error.response.data.errors);
         } else {
-          await api.post("/articles", articleData);
-          toast.success("Article Submitted");
+          setFormErrors({
+            general: "Failed to save article. Using demo mode.",
+          });
         }
+      } finally {
+        setIsLoading(false);
       }
-      router.push("/articles");
-    } catch (error) {
-      toast.error("Error saving article:", error);
-      if (error.response?.data?.errors) {
-        setFormErrors(error.response.data.errors);
-      } else {
-        setFormErrors({ general: "Failed to save article. Using demo mode." });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [isEditMode, id, useDummyData, user, categories, router]
+  );
 
   const handlePreview = () => {
     setPreviewContent(form.getValues().content);
@@ -296,15 +302,18 @@ export default function ArticleForm() {
                       {(field.value || initialImageUrl) && (
                         <div className="mt-4 relative">
                           <div className="relative group w-[400px]">
-                            <img
-                              src={
-                                field.value instanceof File
-                                  ? URL.createObjectURL(field.value)
-                                  : field.value || initialImageUrl
-                              }
-                              alt="Preview"
-                              className="w-[400px] max-h-[200px] object-cover rounded-lg"
-                            />
+                            <Suspense fallback={<Skeleton />}>
+                              <img
+                                src={
+                                  field.value instanceof File
+                                    ? URL.createObjectURL(field.value)
+                                    : field.value || initialImageUrl
+                                }
+                                alt="Preview"
+                                className="w-[400px] max-h-[200px] object-cover rounded-lg"
+                              />
+                            </Suspense>
+
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
                               <div className="flex gap-2 absolute bottom-2 right-2">
                                 <Button

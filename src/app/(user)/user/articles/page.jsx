@@ -19,6 +19,7 @@ export default function ArticleList() {
   const [currentPage, setCurrentPage] = useState(1);
   const debouncedSearch = useDebounce(search, 400);
 
+  
   const handleCategoryChange = (value) => {
     setSelectedCategory(value);
     setCurrentPage(1);
@@ -160,7 +161,7 @@ export default function ArticleList() {
             <span className="font-500">
               Showing: {Math.min(currentPage * 9, total)} of {total} Articles
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+            <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
               {articles.map((article) => (
                 <CardTemplate key={article.id} article={article} />
               ))}

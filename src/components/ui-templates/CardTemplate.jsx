@@ -1,10 +1,11 @@
-import React from 'react'
-import { Card, CardContent } from '../ui/card';
-import Image from 'next/image';
-import { isValidUrl } from '@/utils/validUrl';
-import Link from 'next/link';
+import React, { Suspense } from "react";
+import { Card, CardContent } from "../ui/card";
+import Image from "next/image";
+import { isValidUrl } from "@/utils/validUrl";
+import Link from "next/link";
+import { Skeleton } from "../ui/skeleton";
 
-export default function CardTemplate({article}) {
+export default function CardTemplate({ article }) {
   return (
     <Card
       //   key={article.id}
@@ -12,16 +13,18 @@ export default function CardTemplate({article}) {
     >
       <CardContent className="p-0">
         <div className="relative aspect-[16/9]">
-          {isValidUrl(article.imageUrl) && (
-            <Image
-              src={article.imageUrl}
-              alt="Article Images"
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              priority
-            />
-          )}
+          <Suspense fallback={<Skeleton />}>
+            {isValidUrl(article.imageUrl) && (
+              <Image
+                src={article.imageUrl}
+                alt="Article Images"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                priority
+              />
+            )}
+          </Suspense>
         </div>
 
         <article className="p-4">

@@ -26,14 +26,3 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// api.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     if (error.response?.status === 401) {
-//       // Handle unauthorized error
-//       window.location.href = "/";
-//     }
-//     return Promise.reject(error);
-//   }
-// );
